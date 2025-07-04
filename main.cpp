@@ -128,11 +128,11 @@ vector<MenuItem> getMenuItems(bool isAdmin)
                  }
              }},
             {5, "排序人员", true, true, [](LabManager &m, User *)
-            {
-                m.sortByID();
-                cout << "已按学号排序！\n";
-                m.displayAllUsers(); // 添加此行以显示排序后的信息
-            }},
+             {
+                 m.sortByID();
+                 cout << "已按学号排序！\n";
+                 m.displayAllUsers(); // 添加此行以显示排序后的信息
+             }},
             {6, "显示所有人员", true, true, [](LabManager &m, User *)
              {
                  m.displayAllUsers();

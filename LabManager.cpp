@@ -172,34 +172,25 @@ void LabManager::sortByID()
         return;
 
     Node *dummy = new Node(User()); // 创建哑节点
-    dummy->next = head;
-    bool swapped;
-    Node *prev;
-    Node *curr;
-    Node *last = nullptr;
+    Node *sorted = dummy; // 已排序部分的尾指针
+    Node *current = head; // 当前待插入节点
 
-    do
+    while (current)
     {
-        swapped = false;
-        prev = dummy;
-        curr = dummy->next;
+        Node *next = current->next; // 保存下一个节点
+        Node *prev = dummy; // 用于遍历已排序部分
 
-        while (curr != nullptr && curr->next != last)
+        // 在已排序部分找到插入位置
+        while (prev->next && stoi(prev->next->data.getID()) < stoi(current->data.getID()))
         {
-            if (curr->data.getID() > curr->next->data.getID())
-            {
-                // 交换节点指针
-                Node *temp = curr->next;
-                curr->next = temp->next;
-                temp->next = curr;
-                prev->next = temp;
-                swapped = true;
-            }
-            prev = curr;
-            curr = curr->next;
+            prev = prev->next;
         }
-        last = curr;
-    } while (swapped);
+
+        // 插入当前节点到已排序部分
+        current->next = prev->next;
+        prev->next = current;
+        current = next; // 处理下一个节点
+    }
 
     head = dummy->next;
     delete dummy; // 释放哑节点
