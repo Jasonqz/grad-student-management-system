@@ -184,7 +184,7 @@ void LabManager::sortByID()
         prev = dummy;
         curr = dummy->next;
 
-        while (curr->next != last)
+        while (curr != nullptr && curr->next != last)
         {
             if (curr->data.getID() > curr->next->data.getID())
             {
