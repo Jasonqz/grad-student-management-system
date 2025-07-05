@@ -157,10 +157,15 @@ bool LabManager::updateUser(string id, User newInfo)
     {
         if (!newInfo.getUsername().empty())
             node->data.setUsername(newInfo.getUsername());
-        if (!newInfo.checkPassword(""))
-            node->data.setPassword(newInfo.checkPassword("") ? newInfo.getUsername() : "");
         if (newInfo.isAdminUser() != node->data.isAdminUser())
             node->data.setAdmin(newInfo.isAdminUser());
+    }
+
+    // 管理员或本人可以修改密码
+    if (currentUser->canModifyAll() || currentUser->canModifySelf(id))
+    {
+        if (!newInfo.getPassword().empty())
+            node->data.setPassword(newInfo.getPassword());
     }
 
     return true;
@@ -172,13 +177,13 @@ void LabManager::sortByID()
         return;
 
     Node *dummy = new Node(User()); // 创建哑节点
-    Node *sorted = dummy; // 已排序部分的尾指针
-    Node *current = head; // 当前待插入节点
+    Node *sorted = dummy;           // 已排序部分的尾指针
+    Node *current = head;           // 当前待插入节点
 
     while (current)
     {
         Node *next = current->next; // 保存下一个节点
-        Node *prev = dummy; // 用于遍历已排序部分
+        Node *prev = dummy;         // 用于遍历已排序部分
 
         // 在已排序部分找到插入位置
         while (prev->next && stoi(prev->next->data.getID()) < stoi(current->data.getID()))

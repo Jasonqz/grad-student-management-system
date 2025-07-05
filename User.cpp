@@ -15,6 +15,7 @@ string User::getMajor() const { return major; }
 int User::getEnrollmentYear() const { return enrollmentYear; }
 string User::getContactInfo() const { return contactInfo; }
 string User::getUsername() const { return username; }
+string User::getPassword() const { return password; }
 bool User::checkPassword(string pwd) const { return password == pwd; }
 bool User::isAdminUser() const { return isAdmin; }
 

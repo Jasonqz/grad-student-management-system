@@ -36,6 +36,8 @@ public:
     int getEnrollmentYear() const;
     string getContactInfo() const;
     string getUsername() const;
+    string getPassword() const; // 添加此行
+
     bool checkPassword(string pwd) const;
     bool isAdminUser() const;
 
