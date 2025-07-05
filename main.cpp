@@ -90,6 +90,7 @@ vector<MenuItem> getMenuItems(bool isAdmin)
                  if (m.addUser(newUser))
                  {
                      cout << "添加成功！默认密码: " << defaultPassword << endl;
+                     m.saveToFile("data.dat"); // 添加保存
                  }
                  else
                  {
@@ -104,6 +105,7 @@ vector<MenuItem> getMenuItems(bool isAdmin)
                  if (m.deleteUser(id))
                  {
                      cout << "删除成功！\n";
+                     m.saveToFile("data.dat"); // 添加保存
                  }
                  else
                  {
@@ -121,6 +123,7 @@ vector<MenuItem> getMenuItems(bool isAdmin)
                  if (m.updateUser(id, newInfo))
                  {
                      cout << "修改成功！\n";
+                     m.saveToFile("data.dat"); // 添加保存
                  }
                  else
                  {
@@ -142,16 +145,10 @@ vector<MenuItem> getMenuItems(bool isAdmin)
     else
     {
         items = {
-            {1, "查询人员", true, false, [](LabManager &m, User *)
+            {1, "查询个人信息", true, false, [](LabManager &m, User *u)
              {
-                 string id;
-                 cout << "请输入要查询的学号: ";
-                 getline(cin, id);
-                 User *user = m.queryUser(id);
-                 if (user)
-                     user->displayInfo();
-                 else
-                     cout << "未找到该学生信息！\n";
+                 // 直接查询当前登录用户信息，无需输入ID
+                 u->displayInfo();
              }},
             {2, "修改个人信息", true, false, [](LabManager &m, User *u)
 
