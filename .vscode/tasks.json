@@ -1,4 +1,5 @@
 {
+    "version": "2.0.0",
     "tasks": [
         {
             "type": "cppbuild",
@@ -7,11 +8,23 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
+                "-std=c++11", // 添加C++11标准支持
                 "main.cpp",
                 "LabManager.cpp",
-                "User.cpp", // 添加这两个源文件
+                "DBConnector.cpp",
+                "User.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\main.exe",
+                "-I",
+                // "C:\\mysql-connector-c++-9.3.0-winx64\\include",
+                "C:\\mysql-connector-c-6.1.11-winx64\\include",
+                "-L",
+                // "C:\\mysql-connector-c++-9.3.0-winx64\\lib64",
+                "C:\\mysql-connector-c-6.1.11-winx64\\lib",
+                "-lmysql",
+                // "-lmysqlcppconn-10-vs14",
+                // "-lcrypto-3-x64", // 添加加密库依赖
+                // "-lssl-3-x64" // 添加SSL库依赖
             ],
             "options": {
                 "cwd": "${fileDirname}"
@@ -23,8 +36,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "调试器生成的任务。"
+            "detail": "编译器: C:\\Microsoft VS Code\\mingw\\bin\\g++.exe"
         }
-    ],
-    "version": "2.0.0"
+    ]
 }
