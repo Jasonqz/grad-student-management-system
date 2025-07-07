@@ -33,17 +33,29 @@ public:
     bool connect(std::string const &ip, std::string const &name, std::string const &pass, std::string const &dataBaseName, int const port);
 
     /*
+     * @brief 获取数据库连接
+     * @return MYSQL* 数据库连接指针
+     */
+    MYSQL *getConnection() const { return _conn; }
+
+    /*
+     * @brief 检查连接状态
+     * @return bool 连接状态
+     */
+    bool isConnected() const { return _state; }
+
+    /*
      * @brief 获取表字段数
      * @param tableName 表名
      */
     int getTableField(std::string const &tableName);
 
     /*
-     * @brief 查询表
-     * @param tableName 表名
+     * @brief 执行SQL查询
+     * @param sql SQL查询语句
      * @return 查询结果
      */
-    std::string query(std::string const &tableName);
+    std::string query(std::string const &sql);
 
     /*
      * @brief 执行 sql 指令

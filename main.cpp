@@ -7,9 +7,20 @@
 #include <functional>
 #include "LabManager.h"
 #include "User.h"
+#include <cassert>
+#include "DBConnector.h"
 
 using namespace std;
 
+// 数据库连接配置（请根据实际环境修改）
+const std::string DB_IP = "localhost";
+const std::string DB_USER = "root";
+const std::string DB_PASS = "qz284781";
+const std::string DB_NAME = "grad_student_management";
+const int DB_PORT = 3306;
+
+DBConnector db;
+bool isConnected = false;
 // 权限检查辅助函数
 bool checkLoggedIn(bool loggedIn)
 {
@@ -189,6 +200,15 @@ void handleLogin(LabManager &manager, string &username, string &password, bool &
         cout << "用户名或密码错误！\n";
     }
 }
+bool testConnect()
+{
+    std::cout << "[测试] 数据库连接..." << std::endl;
+    isConnected = db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+    assert(isConnected && "数据库连接失败！");
+    std::cout << "[成功] 数据库连接正常\n"
+              << std::endl;
+    return isConnected;
+}
 
 int main()
 {
@@ -200,6 +220,13 @@ int main()
     string username, password;
     bool loggedIn = false;
     User *currentUser = nullptr;
+
+    // DBConnector db;
+    // bool isConnected = false;
+    // 初始化MySQL库
+    mysql_library_init(0, nullptr, nullptr);
+
+    testConnect();
 
     while (true)
     {
@@ -228,6 +255,8 @@ int main()
                 break;
             case 0:
                 manager.saveToFile("data.dat");
+                // 清理MySQL库
+                mysql_library_end();
                 return 0;
             default:
                 cout << "无效的选择，请重新输入！\n";

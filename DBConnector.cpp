@@ -19,13 +19,6 @@ bool DBConnector::connect(std::string const &ip, std::string const &name, std::s
     }
     // 添加此行禁用SSL连接
     int verify = 0;
-    // mysql_ssl_set(_conn, "", "", "", "", "");
-    // 移除以下不兼容的行
-    // int verify = 0;
-    // mysql_options(_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
-    // 保留SSL模式禁用配置
-    // mysql_options(_conn, MYSQL_OPT_SSL_MODE, "DISABLED");
-    // mysql_ssl_set(_conn, "", "", "", "", "");
 
     // 连接数据库
     if (mysql_real_connect(_conn, ip.c_str(), name.c_str(), pass.c_str(), dataBaseName.c_str(), port, NULL, 0))
@@ -102,15 +95,18 @@ std::string DBConnector::query(std::string const &tableName)
 bool DBConnector::implement(std::string const &sentence)
 {
     if (!_state)
+    {
+        std::cerr << "数据库未连接，无法执行SQL命令" << std::endl;
         return false;
-
-    // 字符串格式化
-    char query[150];
-    sprintf_s(query, "%s", sentence.c_str());
+    }
 
     // 执行命令
-    if (mysql_query(_conn, query))
+    if (mysql_query(_conn, sentence.c_str()))
+    {
+        std::cerr << "SQL执行失败: " << mysql_error(_conn) << std::endl;
+        std::cerr << "SQL语句: " << sentence << std::endl;
         return false;
+    }
 
     return true;
 }

@@ -6,6 +6,117 @@ LabManager::LabManager() : head(nullptr), currentUser(nullptr)
 {
     // 从文件加载数据
     loadFromFile("data.dat");
+    // 数据库连接参数，请根据实际情况修改
+    // _db.connect("localhost", "root", "qz284781", "grad_student_management", 3306);
+}
+
+// SQL字符串转义，防止SQL注入和语法错误
+string LabManager::escapeSQL(const string &str)
+{
+    string res;
+    for (char c : str)
+    {
+        if (c == '\'')
+            res += "''";
+        else
+            res += c;
+    }
+    return res;
+}
+
+// 添加用户到数据库
+bool LabManager::addUserToDataBase(const User &user)
+{
+    // 检查数据库连接状态
+    if (!_db.isConnected())
+    {
+        _db.connect("localhost", "root", "qz284781", "grad_student_management", 3306);
+        if (!_db.isConnected())
+            return false;
+    }
+
+    string sql = "INSERT INTO students (student_id, name, gender, major, enrollment_year, contact_info, username, password, is_admin) VALUES ('" + escapeSQL(user.getID()) + "', '" + escapeSQL(user.getName()) + "', '" + escapeSQL(user.getGender()) + "', '" + escapeSQL(user.getMajor()) + "', " + to_string(user.getEnrollmentYear()) + ", '" + escapeSQL(user.getContactInfo()) + "', '" + escapeSQL(user.getUsername()) + "', '" + escapeSQL(user.getPassword()) + "', " + (user.isAdminUser() ? "1" : "0") + ")";
+
+    // 输出SQL语句用于调试
+    cout << "执行SQL: " << sql << endl;
+
+    bool result = _db.implement(sql);
+    if (!result)
+    {
+        cerr << "添加用户到数据库失败! SQL: " << sql << endl;
+        // 获取MySQL错误信息
+        MYSQL *conn = _db.getConnection(); // 需要在DBConnector中添加获取连接的方法
+        if (conn)
+            cerr << "MySQL错误: " << mysql_error(conn) << endl;
+    }
+    return result;
+}
+
+// 从数据库删除用户
+bool LabManager::deleteUserFromDataBase(const string &userID)
+{
+    // 检查数据库连接状态
+    if (!_db.isConnected())
+    {
+        cerr << "数据库未连接，无法添加用户到数据库" << endl;
+        return false;
+    }
+    // 输出SQL语句用于调试
+    string sql = "DELETE FROM students WHERE student_id = '" + escapeSQL(userID) + "'";
+    cout << "执行SQL: " << sql << endl;
+    return _db.implement(sql);
+}
+
+// 更新数据库中的用户信息
+bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
+{
+    // 检查数据库连接状态
+    if (!_db.isConnected())
+    {
+        cerr << "数据库未连接，无法添加用户到数据库" << endl;
+        return false;
+    }
+    string sql = "UPDATE students SET name = '" + escapeSQL(newInfo.getName()) + "', gender = '" + escapeSQL(newInfo.getGender()) + "', major = '" + escapeSQL(newInfo.getMajor()) + "', " + "enrollment_year = " + to_string(newInfo.getEnrollmentYear()) + ", contact_info = '" + escapeSQL(newInfo.getContactInfo()) + "', " + "username = '" + escapeSQL(newInfo.getUsername()) + "', password = '" + escapeSQL(newInfo.getPassword()) + "', is_admin = " + (newInfo.isAdminUser() ? "1" : "0") + " " + "WHERE student_id = '" + escapeSQL(userID) + "'";
+    // 输出SQL语句用于调试
+    cout << "执行SQL: " << sql << endl;
+
+    return _db.implement(sql);
+}
+
+// 从数据库查询用户
+bool LabManager::queryUserFromDataBase(const string &userID, User &user)
+{
+    string sql = "SELECT * FROM students WHERE student_id = '" + escapeSQL(userID) + "'";
+    string result = _db.query(sql);
+    istringstream iss(result);
+    string line;
+
+    if (getline(iss, line) && !line.empty())
+    {
+        istringstream lineStream(line);
+        vector<string> fields;
+        string field;
+
+        while (getline(lineStream, field, '\t'))
+        {
+            fields.push_back(field);
+        }
+
+        if (fields.size() >= 9)
+        {
+            user.setID(fields[0]);
+            user.setName(fields[1]);
+            user.setGender(fields[2]);
+            user.setMajor(fields[3]);
+            user.setEnrollmentYear(stoi(fields[4]));
+            user.setContactInfo(fields[5]);
+            user.setUsername(fields[6]);
+            user.setPassword(fields[7]);
+            user.setAdmin(fields[8] == "1");
+            return true;
+        }
+    }
+    return false;
 }
 
 LabManager::~LabManager()
@@ -81,6 +192,8 @@ bool LabManager::addUser(User user)
     Node *newNode = new Node(user);
     newNode->next = head;
     head = newNode;
+    // 再添加到数据库
+    addUserToDataBase(user);
 
     return true;
 }
@@ -116,6 +229,8 @@ bool LabManager::deleteUser(string id)
     }
 
     delete current;
+    // 再从数据库删除
+    deleteUserFromDataBase(id);
     return true;
 }
 
@@ -137,6 +252,8 @@ bool LabManager::updateUser(string id, User newInfo)
     {
         return false;
     }
+    // 保存原始ID（可能被修改）
+    string originalID = node->data.getID();
 
     // 更新信息（保留原信息，只替换新提供的信息）
     if (!newInfo.getID().empty())
@@ -167,6 +284,8 @@ bool LabManager::updateUser(string id, User newInfo)
         if (!newInfo.getPassword().empty())
             node->data.setPassword(newInfo.getPassword());
     }
+    // 更新数据库
+    updateUserInDataBase(originalID, node->data);
 
     return true;
 }
