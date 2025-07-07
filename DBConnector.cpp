@@ -1,120 +1,116 @@
 #include "DBConnector.h"
-#include <stdexcept>
 #include <iostream>
 
-DBConnector *DBConnector::instance = nullptr;
-
-DBConnector::DBConnector(const std::string &host, const std::string &user, const std::string &password, const std::string &dbname, unsigned int port)
+DBConnector::DBConnector() : _state(false), _res(nullptr), _column(nullptr)
 {
-    conn = mysql_init(nullptr);
-    if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), dbname.c_str(), port, nullptr, 0))
+    _conn = new MYSQL;
+}
+
+bool DBConnector::connect(std::string const &ip, std::string const &name, std::string const &pass, std::string const &dataBaseName, int const port)
+{
+    if (_state)
+        return false;
+
+    // 初始化数据库
+    if (!mysql_init(_conn))
     {
-        throw std::runtime_error(mysql_error(conn));
+        std::cerr << "MySQL初始化失败: " << mysql_error(_conn) << std::endl;
+        return false;
+    }
+    // 添加此行禁用SSL连接
+    int verify = 0;
+    // mysql_ssl_set(_conn, "", "", "", "", "");
+    // 移除以下不兼容的行
+    // int verify = 0;
+    // mysql_options(_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+    // 保留SSL模式禁用配置
+    // mysql_options(_conn, MYSQL_OPT_SSL_MODE, "DISABLED");
+    // mysql_ssl_set(_conn, "", "", "", "", "");
+
+    // 连接数据库
+    if (mysql_real_connect(_conn, ip.c_str(), name.c_str(), pass.c_str(), dataBaseName.c_str(), port, NULL, 0))
+    {
+        _state = true;
+        return true;
+    }
+    else
+    {
+        // 输出错误信息以便调试
+        std::cerr << "MySQL连接错误: " << mysql_error(_conn) << std::endl;
+        return false;
     }
 }
 
-DBConnector::~DBConnector()
+int DBConnector::getTableField(std::string const &tableName)
 {
-    if (conn)
+    if (!_state)
+        return -1;
+
+    // 将字符串格式化为查询数组
+    char query[150];
+    sprintf_s(query, "show columns from %s", tableName.c_str());
+
+    // 执行查询
+    if (mysql_query(_conn, query))
+        return -1;
+
+    // 获取查询结果
+    _res = mysql_store_result(_conn);
+    if (_res == nullptr)
+        return -1;
+
+    return mysql_affected_rows(_conn);
+}
+
+std::string DBConnector::query(std::string const &tableName)
+{
+    if (!_state)
+        return "";
+
+    // 获取列数
+    int field = getTableField(tableName);
+
+    // 将字符串格式化为查询数组
+    char query[150];
+    sprintf_s(query, "select * from %s", tableName.c_str());
+
+    // 执行查询
+    if (mysql_query(_conn, query))
+        return "";
+
+    // 获取查询结果
+    _res = mysql_store_result(_conn);
+    if (_res == nullptr)
+        return "";
+
+    // 将查询结果转化为字符串输出
+    fd.reserve(field);
+    fd.resize(field);
+    for (int i = 0; i < field; i++)
+        fd[i] = mysql_fetch_field(_res);
+
+    std::string res = "";
+    while (_column = mysql_fetch_row(_res))
     {
-        mysql_close(conn);
+        for (int i = 0; i < field; i++)
+            res += _column[i], res += "\t";
+        res += "\n";
     }
+    return res;
 }
 
-DBConnector *DBConnector::getInstance(const std::string &host, const std::string &user, const std::string &password, const std::string &dbname, unsigned int port)
+bool DBConnector::implement(std::string const &sentence)
 {
-    if (!instance)
-    {
-        instance = new DBConnector(host, user, password, dbname, port);
-    }
-    return instance;
-}
+    if (!_state)
+        return false;
 
-std::vector<std::vector<std::string>> DBConnector::query(const std::string &sql)
-{
-    std::vector<std::vector<std::string>> results;
-    if (mysql_query(conn, sql.c_str()) != 0)
-    {
-        throw std::runtime_error(mysql_error(conn));
-    }
+    // 字符串格式化
+    char query[150];
+    sprintf_s(query, "%s", sentence.c_str());
 
-    MYSQL_RES *res = mysql_store_result(conn);
-    if (!res)
-        return results;
+    // 执行命令
+    if (mysql_query(_conn, query))
+        return false;
 
-    MYSQL_ROW row;
-    unsigned int num_fields = mysql_num_fields(res);
-    MYSQL_FIELD *fields = mysql_fetch_fields(res);
-
-    // 添加列名
-    std::vector<std::string> column_names;
-    for (unsigned int i = 0; i < num_fields; ++i)
-    {
-        column_names.push_back(fields[i].name);
-    }
-    results.push_back(column_names);
-
-    // 添加行数据
-    while ((row = mysql_fetch_row(res)))
-    {
-        std::vector<std::string> row_data;
-        for (unsigned int i = 0; i < num_fields; ++i)
-        {
-            row_data.push_back(row[i] ? row[i] : "");
-        }
-        results.push_back(row_data);
-    }
-
-    mysql_free_result(res);
-    return results;
-}
-
-bool DBConnector::update(const std::string &sql)
-{
-    return mysql_query(conn, sql.c_str()) == 0;
-}
-
-// 创建用户
-bool DBConnector::createUser(const std::string &studentID, const std::string &name, const std::string &gender, const std::string &major, int enrollmentYear, const std::string &contactInfo, const std::string &username, const std::string &password, bool isAdmin)
-{
-    std::string sql = "INSERT INTO users (studentID, name, gender, major, enrollmentYear, contactInfo, username, password, isAdmin) VALUES ('" +
-                      studentID + "', '" + name + "', '" + gender + "', '" + major + "', " + std::to_string(enrollmentYear) + ", '" +
-                      contactInfo + "', '" + username + "', '" + password + "', " + (isAdmin ? "1" : "0") + ")";
-    return update(sql);
-}
-
-// 按用户名查询用户
-std::vector<std::vector<std::string>> DBConnector::getUserByUsername(const std::string &username)
-{
-    std::string sql = "SELECT * FROM users WHERE username = '" + username + "'";
-    return query(sql);
-}
-
-// 查询所有用户
-std::vector<std::vector<std::string>> DBConnector::getAllUsers()
-{
-    return query("SELECT * FROM users");
-}
-
-// 更新用户信息（不含密码）
-bool DBConnector::updateUser(const std::string &studentID, const std::string &name, const std::string &gender, const std::string &major, int enrollmentYear, const std::string &contactInfo, const std::string &username, bool isAdmin)
-{
-    std::string sql = "UPDATE users SET name = '" + name + "', gender = '" + gender + "', major = '" + major + "', enrollmentYear = " +
-                      std::to_string(enrollmentYear) + ", contactInfo = '" + contactInfo + "', username = '" + username + "', isAdmin = " +
-                      (isAdmin ? "1" : "0") + " WHERE studentID = '" + studentID + "'";
-    return update(sql);
-}
-
-// 更新密码
-bool DBConnector::updateUserPassword(const std::string &username, const std::string &newPassword)
-{
-    std::string sql = "UPDATE users SET password = '" + newPassword + "' WHERE username = '" + username + "'";
-    return update(sql);
-}
-
-// 删除用户
-bool DBConnector::deleteUser(const std::string &studentID)
-{
-    std::string sql = "DELETE FROM users WHERE studentID = '" + studentID + "'";
-    return update(sql);
+    return true;
 }

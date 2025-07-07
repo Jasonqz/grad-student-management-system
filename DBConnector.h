@@ -1,32 +1,53 @@
-#ifndef DBCONNECTOR_H
-#define DBCONNECTOR_H
+#pragma once
 
-#include <string>
-#include <vector>
 #include <mysql.h>
+#include <vector>
+#include <string>
+#include <windows.h>
+#include <winsock.h>
 
 class DBConnector
 {
 private:
-    MYSQL *conn;
-    static DBConnector *instance;
-    DBConnector(const std::string &host, const std::string &user, const std::string &password, const std::string &dbname, unsigned int port);
+    bool _state;                     // 连接状态
+    MYSQL *_conn;                    // 数据库连接
+    std::vector<MYSQL_FIELD *> fd;   // 字段列数组
+    std::vector<std::string> _field; // 字段名
+    MYSQL_RES *_res;                 // 返回行的查询结果集
+    MYSQL_ROW _column;               // 一个行数据的类型安全的表示
 
 public:
-    ~DBConnector();
-    static DBConnector *getInstance(const std::string &host = "localhost", const std::string &user = "root", const std::string &password = "your_password", const std::string &dbname = "grad_student_management", unsigned int port = 3306);
+    /*
+     * @brief 构造函数，初始化参数
+     */
+    DBConnector();
 
-    // Users表CRUD操作
-    bool createUser(const std::string &studentID, const std::string &name, const std::string &gender, const std::string &major, int enrollmentYear, const std::string &contactInfo, const std::string &username, const std::string &password, bool isAdmin = false);
-    std::vector<std::vector<std::string>> getUserByUsername(const std::string &username);
-    std::vector<std::vector<std::string>> getAllUsers();
-    bool updateUser(const std::string &studentID, const std::string &name, const std::string &gender, const std::string &major, int enrollmentYear, const std::string &contactInfo, const std::string &username, bool isAdmin);
-    bool updateUserPassword(const std::string &username, const std::string &newPassword);
-    bool deleteUser(const std::string &studentID);
+    /*
+     * @brief 连接数据库
+     * @param ip IP地址
+     * @param name 用户名
+     * @param pass 密码
+     * @param dataBaseName 数据库名
+     * @param port 端口
+     */
+    bool connect(std::string const &ip, std::string const &name, std::string const &pass, std::string const &dataBaseName, int const port);
 
-private:
-    std::vector<std::vector<std::string>> query(const std::string &sql);
-    bool update(const std::string &sql);
+    /*
+     * @brief 获取表字段数
+     * @param tableName 表名
+     */
+    int getTableField(std::string const &tableName);
+
+    /*
+     * @brief 查询表
+     * @param tableName 表名
+     * @return 查询结果
+     */
+    std::string query(std::string const &tableName);
+
+    /*
+     * @brief 执行 sql 指令
+     * @param sentence sql 命令
+     */
+    bool implement(std::string const &sentence);
 };
-
-#endif // DBCONNECTOR_H
