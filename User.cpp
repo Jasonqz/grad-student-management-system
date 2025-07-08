@@ -112,12 +112,25 @@ bool User::canModifySelf(string id) const
 {
     return (studentID == id);
 }
-
+/**
+ * @brief 权限校验
+ *
+ * @param id 学号
+ * @return true 权限校验通过
+ * @return false 权限校验失败
+ */
 bool User::canModifyAll() const
 {
     return isAdmin; // 直接返回isAdmin成员变量
 }
 
+/**
+ * @brief 输出操作运算符重载
+ *      这个重载函数决定了对象数据如何被格式化为文本流
+ * @param os 输出流对象
+ * @param user 要输出的用户对象
+ * @return ostream& 输出流对象
+ */
 ostream &operator<<(ostream &os, const User &user)
 {
     os << user.studentID << "\t"
@@ -131,10 +144,17 @@ ostream &operator<<(ostream &os, const User &user)
        << user.isAdmin;
     return os;
 }
-
+/**
+ * @brief 输入操作运算符重载
+ * 从输入流(如文件、控制台)读取格式化数据并构造 User 对象。
+ * 重载 >> 运算符，接受输入流 is 和 User 对象引用 user ，返回输入流引用以支持链式调用
+ * @param is 输入流对象
+ * @param user 要输入的用户对象
+ * @return istream& 输入流对象
+ */
 istream &operator>>(istream &is, User &user)
 {
-    getline(is, user.studentID, '\t');
+    getline(is, user.studentID, '\t'); // 读取到制表符\t为止，存入studentID
     getline(is, user.name, '\t');
     getline(is, user.gender, '\t');
     getline(is, user.major, '\t');
@@ -154,7 +174,10 @@ istream &operator>>(istream &is, User &user)
     return is;
 }
 
-// 析构函数实现
+/**
+ * @brief 析构函数
+ *
+ */
 User::~User()
 {
     // 析构函数逻辑（如果需要）

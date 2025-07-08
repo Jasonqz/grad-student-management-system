@@ -264,15 +264,19 @@ int main()
         }
         else
         {
-            auto it = find_if(menuItems.begin(), menuItems.end(),
-                              [choice](const MenuItem &item)
-                              { return item.id == choice; });
+            // std::find_if：STL 中的标准算法，用于查找满足特定条件的元素。
+            // 捕获列表：[choice] 表示按值捕获外部变量 choice，使得 Lambda 内部可以使用这个值。
+            // 在菜单选项列表中查找用户选择的菜单项
+            auto selectedItem = find_if(menuItems.begin(), menuItems.end(),
+                                        [choice](const MenuItem &item)
+                                        { return item.id == choice; });
 
-            if (it != menuItems.end())
+            if (selectedItem != menuItems.end())
             {
-                if (it->requireLogin && !checkLoggedIn(loggedIn))
+                // 权限校验
+                if (selectedItem->requireLogin && !checkLoggedIn(loggedIn))
                     continue;
-                if (it->requireAdmin && !checkAdminPermission(currentUser))
+                if (selectedItem->requireAdmin && !checkAdminPermission(currentUser))
                     continue;
 
                 if (choice == 0)
@@ -283,7 +287,8 @@ int main()
                 }
                 else
                 {
-                    it->action(manager, currentUser);
+                    // 执行相应操作
+                    selectedItem->action(manager, currentUser);
                 }
             }
             else

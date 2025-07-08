@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <sstream> // 添加此行以使用istringstream
 
+/**
+ * @brief 构造函数
+ *
+ */
 LabManager::LabManager() : head(nullptr), currentUser(nullptr)
 {
     // 从文件加载数据
@@ -10,7 +14,11 @@ LabManager::LabManager() : head(nullptr), currentUser(nullptr)
     // _db.connect("localhost", "root", "qz284781", "grad_student_management", 3306);
 }
 
-// SQL字符串转义，防止SQL注入和语法错误
+/**
+ * @brief SQL字符串转义，防止SQL注入和语法错误
+ * @param str
+ * @return string
+ */
 string LabManager::escapeSQL(const string &str)
 {
     string res;
@@ -24,7 +32,12 @@ string LabManager::escapeSQL(const string &str)
     return res;
 }
 
-// 添加用户到数据库
+/**
+ * @brief 添加用户到数据库
+ * @param user
+ * @return true
+ * @return false
+ */
 bool LabManager::addUserToDataBase(const User &user)
 {
     // 检查数据库连接状态
@@ -52,7 +65,12 @@ bool LabManager::addUserToDataBase(const User &user)
     return result;
 }
 
-// 从数据库删除用户
+/**
+ * @brief 删除用户
+ * @param userID
+ * @return true
+ * @return false
+ */
 bool LabManager::deleteUserFromDataBase(const string &userID)
 {
     // 检查数据库连接状态
@@ -67,7 +85,13 @@ bool LabManager::deleteUserFromDataBase(const string &userID)
     return _db.implement(sql);
 }
 
-// 更新数据库中的用户信息
+/**
+ * @brief 更新用户信息
+ * @param userID
+ * @param newInfo
+ * @return true
+ * @return false
+ */
 bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
 {
     // 检查数据库连接状态
@@ -83,7 +107,13 @@ bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
     return _db.implement(sql);
 }
 
-// 从数据库查询用户
+/**
+ * @brief 查询用户信息
+ * @param userID
+ * @param user
+ * @return true
+ * @return false
+ */
 bool LabManager::queryUserFromDataBase(const string &userID, User &user)
 {
     string sql = "SELECT * FROM students WHERE student_id = '" + escapeSQL(userID) + "'";
@@ -119,6 +149,10 @@ bool LabManager::queryUserFromDataBase(const string &userID, User &user)
     return false;
 }
 
+/**
+ * @brief 析构函数
+ *
+ */
 LabManager::~LabManager()
 {
     // 释放链表内存
@@ -129,6 +163,11 @@ LabManager::~LabManager()
         delete temp;
     }
 }
+/**
+ * @brief 查找用户节点
+ * @param id
+ * @return Node*
+ */
 
 Node *LabManager::findNode(string id) const
 {
@@ -143,6 +182,14 @@ Node *LabManager::findNode(string id) const
     }
     return nullptr;
 }
+
+/**
+ * @brief 登录
+ * @param username
+ * @param password
+ * @return true
+ * @return false
+ */
 
 bool LabManager::login(string username, string password)
 {
@@ -159,12 +206,20 @@ bool LabManager::login(string username, string password)
     }
     return false;
 }
-
+/**
+ * @brief 获取当前用户
+ * @return User*
+ */
 User *LabManager::getCurrentUser() const
 {
     return currentUser;
 }
 
+/**
+ * @brief 查询用户信息
+ * @param id
+ * @return User*
+ */
 User *LabManager::queryUser(string id) const
 {
     Node *node = findNode(id);
@@ -175,6 +230,12 @@ User *LabManager::queryUser(string id) const
     return nullptr;
 }
 
+/**
+ * @brief 添加用户
+ * @param user
+ * @return true
+ * @return false
+ */
 bool LabManager::addUser(User user)
 {
     if (!currentUser || !currentUser->canModifyAll())
@@ -185,6 +246,7 @@ bool LabManager::addUser(User user)
     // 检查学号是否已存在
     if (findNode(user.getID()))
     {
+        cout << "错误：用户ID已存在，请使用其他ID。" << endl;
         return false;
     }
 
@@ -198,10 +260,18 @@ bool LabManager::addUser(User user)
     return true;
 }
 
+/**
+ * @brief 删除用户
+ * @param id
+ * @return true
+ * @return false
+ */
+
 bool LabManager::deleteUser(string id)
 {
     if (!currentUser || !currentUser->canModifyAll())
     {
+        cout << "错误：权限不足，无法执行删除操作。" << endl;
         return false;
     }
 
@@ -216,6 +286,7 @@ bool LabManager::deleteUser(string id)
 
     if (!current)
     {
+        cout << "错误：未找到ID为 '" << id << "' 的用户。" << endl;
         return false; // 未找到
     }
 
@@ -231,25 +302,36 @@ bool LabManager::deleteUser(string id)
     delete current;
     // 再从数据库删除
     deleteUserFromDataBase(id);
+    cout << "成功：ID为 '" << id << "' 的用户已被删除。" << endl;
     return true;
 }
+/**
+ * @brief 更新用户信息
+ * @param id
+ * @param newInfo
+ * @return true
+ * @return false
+ */
 
 bool LabManager::updateUser(string id, User newInfo)
 {
     if (!currentUser)
     {
+        cout << "系统错误：请重新登录系统。" << endl;
         return false;
     }
 
     // 检查权限
     if (!currentUser->canModifyAll() && !currentUser->canModifySelf(id))
     {
+        cout << "错误：权限不足，无法更新用户信息。" << endl;
         return false;
     }
 
     Node *node = findNode(id);
     if (!node)
     {
+        cout << "错误：未找到ID为 '" << id << "' 的用户。" << endl;
         return false;
     }
     // 保存原始ID（可能被修改）
@@ -285,11 +367,19 @@ bool LabManager::updateUser(string id, User newInfo)
             node->data.setPassword(newInfo.getPassword());
     }
     // 更新数据库
-    updateUserInDataBase(originalID, node->data);
+    bool res = updateUserInDataBase(originalID, node->data);
+    if (res)
+        cout << "成功：用户信息已更新。" << endl;
+    else
+        cout << "数据库更新失败。" << endl;
 
-    return true;
+    return res;
 }
 
+/**
+ * @brief 按学号排序用户信息
+ *
+ */
 void LabManager::sortByID()
 {
     if (!head || !head->next)
@@ -319,9 +409,13 @@ void LabManager::sortByID()
     head = dummy->next;
     delete dummy; // 释放哑节点
 }
-
+/**
+ * @brief 保存用户信息到文件
+ * @param filename
+ */
 void LabManager::saveToFile(string filename) const
 {
+    // 以写入模式打开指定路径的文件
     ofstream file(filename);
     if (!file.is_open())
     {
@@ -333,14 +427,25 @@ void LabManager::saveToFile(string filename) const
     while (current)
     {
         file << current->data << endl;
+        // 检查写入状态
+        if (file.fail())
+        {
+            cerr << "写入文件失败，位置: " << current->data.getUsername() << endl;
+            break; // 终止写入
+        }
         current = current->next;
     }
 
     file.close();
 }
+/**
+ * @brief 从文件加载用户信息
+ * @param filename
+ */
 
 void LabManager::loadFromFile(string filename)
 {
+    // 打开文件并创建输入文件流对象
     ifstream file(filename);
     if (!file.is_open())
     {
@@ -358,13 +463,15 @@ void LabManager::loadFromFile(string filename)
         delete temp;
     }
 
+    // 存储读取内容的字符串
     string line;
+    // 逐行读取文件内容
     while (getline(file, line))
     {
         if (line.empty())
             continue;
 
-        // 解析数据行
+        // 解析每行数据到User对象
         istringstream iss(line);
         User user;
         iss >> user;
@@ -378,6 +485,10 @@ void LabManager::loadFromFile(string filename)
     file.close();
 }
 
+/**
+ * @brief 显示所有用户信息
+ *
+ */
 void LabManager::displayAllUsers() const
 {
     Node *current = head;
