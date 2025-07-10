@@ -38,10 +38,10 @@ public:
     // 用户管理
     bool login(string username, string password);
     User *getCurrentUser() const;
-    User *queryUser(string id) const;
+    User *queryUser(string id);
 
     // 人员信息管理
-    bool addUser(User user);
+    bool addUser(User user, bool toDb);
     bool deleteUser(string id);
     bool updateUser(string id, User newInfo);
     void sortByID();

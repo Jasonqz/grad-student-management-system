@@ -9,7 +9,10 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "-std=c++11", // 添加C++11标准支持
+                "-finput-charset=UTF-8",
+                "-fexec-charset=UTF-8",
                 "main.cpp",
+                "StringUtils.cpp",
                 "LabManager.cpp",
                 "DBConnector.cpp",
                 "User.cpp",
@@ -17,11 +20,14 @@
                 "${fileDirname}\\main.exe",
                 "-I",
                 // "C:\\mysql-connector-c++-9.3.0-winx64\\include",
-                "C:\\mysql-connector-c-6.1.11-winx64\\include",
+                // "C:\\mysql-connector-c-6.1.11-winx64\\include",
+                "C:\\Software\\MySQL\\MySQL Server 8.0\\include",
                 "-L",
                 // "C:\\mysql-connector-c++-9.3.0-winx64\\lib64",
-                "C:\\mysql-connector-c-6.1.11-winx64\\lib",
+                // "C:\\mysql-connector-c-6.1.11-winx64\\lib",
+                "C:\\Software\\MySQL\\MySQL Server 8.0\\lib",
                 "-lmysql",
+                // "-fexec-charset=UTF-8"
                 // "-lmysqlcppconn-10-vs14",
                 // "-lcrypto-3-x64", // 添加加密库依赖
                 // "-lssl-3-x64" // 添加SSL库依赖

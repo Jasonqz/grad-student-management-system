@@ -53,6 +53,10 @@
         "ratio": "cpp",
         "set": "cpp",
         "mutex": "cpp",
-        "thread": "cpp"
-    }
+        "thread": "cpp",
+        "cassert": "cpp",
+        "regex": "cpp"
+    },
+    "terminal.integrated.fontFamily": "Consolas, 'Courier New', monospace",
+    "terminal.integrated.fontSize": 15
 }

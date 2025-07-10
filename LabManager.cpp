@@ -1,6 +1,15 @@
 #include "LabManager.h"
 #include <algorithm>
 #include <sstream> // 添加此行以使用istringstream
+#include "StringUtils.h"
+#include <cassert> // 添加 assert 头文件
+
+// 数据库连接配置
+const std::string DB_IP = "localhost";
+const std::string DB_USER = "root";
+const std::string DB_PASS = "qz284781";
+const std::string DB_NAME = "grad_student_management";
+const int DB_PORT = 3306;
 
 /**
  * @brief 构造函数
@@ -10,8 +19,11 @@ LabManager::LabManager() : head(nullptr), currentUser(nullptr)
 {
     // 从文件加载数据
     loadFromFile("data.dat");
-    // 数据库连接参数，请根据实际情况修改
-    // _db.connect("localhost", "root", "qz284781", "grad_student_management", 3306);
+    // 数据库连接参数
+    _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+    assert(_db.isConnected() && "数据库连接失败！");
+    std::cout << "[成功] 数据库连接正常\n"
+              << std::endl;
 }
 
 /**
@@ -43,7 +55,7 @@ bool LabManager::addUserToDataBase(const User &user)
     // 检查数据库连接状态
     if (!_db.isConnected())
     {
-        _db.connect("localhost", "root", "qz284781", "grad_student_management", 3306);
+        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
         if (!_db.isConnected())
             return false;
     }
@@ -97,8 +109,18 @@ bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
     // 检查数据库连接状态
     if (!_db.isConnected())
     {
-        cerr << "数据库未连接，无法添加用户到数据库" << endl;
-        return false;
+        // 尝试重新连接数据库
+        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        // 检查重连结果
+        if (!_db.isConnected())
+        {
+            cerr << "数据库未连接，无法更新用户信息" << endl; // 修正错误信息
+            // 获取并显示MySQL错误信息
+            MYSQL *conn = _db.getConnection();
+            if (conn)
+                cerr << "MySQL错误: " << mysql_error(conn) << endl;
+            return false;
+        }
     }
     string sql = "UPDATE students SET name = '" + escapeSQL(newInfo.getName()) + "', gender = '" + escapeSQL(newInfo.getGender()) + "', major = '" + escapeSQL(newInfo.getMajor()) + "', " + "enrollment_year = " + to_string(newInfo.getEnrollmentYear()) + ", contact_info = '" + escapeSQL(newInfo.getContactInfo()) + "', " + "username = '" + escapeSQL(newInfo.getUsername()) + "', password = '" + escapeSQL(newInfo.getPassword()) + "', is_admin = " + (newInfo.isAdminUser() ? "1" : "0") + " " + "WHERE student_id = '" + escapeSQL(userID) + "'";
     // 输出SQL语句用于调试
@@ -116,8 +138,31 @@ bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
  */
 bool LabManager::queryUserFromDataBase(const string &userID, User &user)
 {
-    string sql = "SELECT * FROM students WHERE student_id = '" + escapeSQL(userID) + "'";
+    string trimmedID = StringUtils::trim(userID);
+    // 修正：添加ID验证检查
+    if (!StringUtils::isValidUserID(trimmedID))
+    {
+        cout << "[错误] 用户ID格式无效！仅允许数字，长度1-20字符\n";
+        return false;
+    }
+    cout << "[提示] 正在数据库中查询用户信息，用户ID: " << userID << endl;
+    string sql = "SELECT * FROM students WHERE student_id = '" + escapeSQL(trimmedID) + "'";
+    cout << "[SQL语句] " << sql << endl; // 调试用，正式环境可移除
+    // 检查数据库连接状态
+    if (!_db.isConnected())
+    {
+        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        if (!_db.isConnected())
+            return false;
+    }
+
     string result = _db.query(sql);
+    if (result.empty())
+    {
+        cout << "[警告] 数据库查询返回空结果" << endl;
+        return false;
+    }
+
     istringstream iss(result);
     string line;
 
@@ -127,13 +172,14 @@ bool LabManager::queryUserFromDataBase(const string &userID, User &user)
         vector<string> fields;
         string field;
 
-        while (getline(lineStream, field, '\t'))
+        while (getline(lineStream, field, '	'))
         {
             fields.push_back(field);
         }
 
         if (fields.size() >= 9)
         {
+            cout << "[成功] 从数据库中查询到用户信息，字段数量: " << fields.size() << endl;
             user.setID(fields[0]);
             user.setName(fields[1]);
             user.setGender(fields[2]);
@@ -145,7 +191,14 @@ bool LabManager::queryUserFromDataBase(const string &userID, User &user)
             user.setAdmin(fields[8] == "1");
             return true;
         }
+        else
+        {
+            cout << "[错误] 查询结果字段数量不足，期望至少9个字段，实际获取: " << fields.size() << endl;
+            return false;
+        }
     }
+
+    cout << "[错误] 未能从查询结果中读取有效数据行" << endl;
     return false;
 }
 
@@ -220,12 +273,22 @@ User *LabManager::getCurrentUser() const
  * @param id
  * @return User*
  */
-User *LabManager::queryUser(string id) const
+User *LabManager::queryUser(string id)
 {
     Node *node = findNode(id);
     if (node)
     {
         return &(node->data);
+    }
+    // 本地未找到，使用现有方法从数据库查询
+    User dbUser;
+    if (queryUserFromDataBase(id, dbUser))
+    {
+        // 查询成功，添加到本地数据结构
+        const_cast<LabManager *>(this)->addUser(dbUser, false);
+
+        // 返回新添加的用户指针
+        return queryUser(id); // 再次查询获取指针
     }
     return nullptr;
 }
@@ -236,7 +299,7 @@ User *LabManager::queryUser(string id) const
  * @return true
  * @return false
  */
-bool LabManager::addUser(User user)
+bool LabManager::addUser(User user, bool toDb)
 {
     if (!currentUser || !currentUser->canModifyAll())
     {
@@ -249,13 +312,19 @@ bool LabManager::addUser(User user)
         cout << "错误：用户ID已存在，请使用其他ID。" << endl;
         return false;
     }
+    if (!StringUtils::isValidUserID(user.getID()))
+    {
+        cout << "[错误] 用户ID格式无效！仅允许数字，长度1-20字符\n";
+        return false;
+    }
 
     // 添加到链表头部
     Node *newNode = new Node(user);
     newNode->next = head;
     head = newNode;
     // 再添加到数据库
-    addUserToDataBase(user);
+    if (toDb)
+        addUserToDataBase(user);
 
     return true;
 }
@@ -338,8 +407,8 @@ bool LabManager::updateUser(string id, User newInfo)
     string originalID = node->data.getID();
 
     // 更新信息（保留原信息，只替换新提供的信息）
-    if (!newInfo.getID().empty())
-        node->data.setID(newInfo.getID());
+    // if (!newInfo.getID().empty())
+    //     node->data.setID(newInfo.getID());
     if (!newInfo.getName().empty())
         node->data.setName(newInfo.getName());
     if (!newInfo.getGender().empty())
@@ -351,11 +420,9 @@ bool LabManager::updateUser(string id, User newInfo)
     if (!newInfo.getContactInfo().empty())
         node->data.setContactInfo(newInfo.getContactInfo());
 
-    // 只有管理员可以修改用户名、密码和角色
+    // 只有管理员可以修改
     if (currentUser->canModifyAll())
     {
-        if (!newInfo.getUsername().empty())
-            node->data.setUsername(newInfo.getUsername());
         if (newInfo.isAdminUser() != node->data.isAdminUser())
             node->data.setAdmin(newInfo.isAdminUser());
     }
@@ -365,6 +432,8 @@ bool LabManager::updateUser(string id, User newInfo)
     {
         if (!newInfo.getPassword().empty())
             node->data.setPassword(newInfo.getPassword());
+        if (!newInfo.getUsername().empty())
+            node->data.setUsername(newInfo.getUsername());
     }
     // 更新数据库
     bool res = updateUserInDataBase(originalID, node->data);

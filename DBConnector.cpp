@@ -23,6 +23,13 @@ bool DBConnector::connect(std::string const &ip, std::string const &name, std::s
     // 连接数据库
     if (mysql_real_connect(_conn, ip.c_str(), name.c_str(), pass.c_str(), dataBaseName.c_str(), port, NULL, 0))
     {
+        // 设置数据库连接字符集为utf8mb4
+        if (mysql_set_character_set(_conn, "utf8mb4") != 0)
+        {
+            std::cerr << "设置字符集失败: " << mysql_error(_conn) << std::endl;
+            mysql_close(_conn);
+            return false;
+        }
         _state = true;
         return true;
     }
@@ -55,40 +62,57 @@ int DBConnector::getTableField(std::string const &tableName)
     return mysql_affected_rows(_conn);
 }
 
-std::string DBConnector::query(std::string const &tableName)
+std::string DBConnector::query(std::string const &sql)
 {
     if (!_state)
+    {
+        std::cerr << "[错误] 数据库未连接，无法执行查询" << std::endl;
         return "";
-
-    // 获取列数
-    int field = getTableField(tableName);
-
-    // 将字符串格式化为查询数组
-    char query[150];
-    sprintf_s(query, "select * from %s", tableName.c_str());
+    }
 
     // 执行查询
-    if (mysql_query(_conn, query))
+    if (mysql_query(_conn, sql.c_str()))
+    {
+        std::cerr << "SQL查询失败: " << mysql_error(_conn) << std::endl;
+        std::cerr << "SQL语句: " << sql << std::endl;
         return "";
+    }
 
     // 获取查询结果
     _res = mysql_store_result(_conn);
     if (_res == nullptr)
-        return "";
+    {
+        // 区分"无结果"和"真错误"
+        if (mysql_field_count(_conn) == 0)
+        {
+            // 无结果集（非SELECT查询）
+            std::cerr << "[调试] 查询成功但无结果集返回" << std::endl;
+            return "";
+        }
+        else
+        {
+            // 真错误
+            std::cerr << "[严重错误] 获取结果集失败: " << mysql_error(_conn) << std::endl;
+            return "";
+        }
+    }
 
-    // 将查询结果转化为字符串输出
-    fd.reserve(field);
-    fd.resize(field);
-    for (int i = 0; i < field; i++)
-        fd[i] = mysql_fetch_field(_res);
+    // 获取字段信息
+    int fieldCount = mysql_num_fields(_res);
+    MYSQL_FIELD *fields = mysql_fetch_fields(_res);
 
     std::string res = "";
     while (_column = mysql_fetch_row(_res))
     {
-        for (int i = 0; i < field; i++)
-            res += _column[i], res += "\t";
+        for (int i = 0; i < fieldCount; i++)
+        {
+            res += (_column[i] ? _column[i] : "NULL");
+            res += "\t";
+        }
         res += "\n";
     }
+
+    mysql_free_result(_res); // 释放结果集
     return res;
 }
 

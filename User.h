@@ -53,7 +53,7 @@ public:
     void setAdmin(bool admin);
 
     // 输入/输出方法
-    void inputInfo(bool partial = false);
+    void inputInfo(bool partial = false, bool isAdminMode = false);
     void displayInfo() const;
 
     // 权限判断
