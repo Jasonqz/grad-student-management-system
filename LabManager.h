@@ -23,12 +23,10 @@ class LabManager
 private:
     Node *head;        // 链表头指针
     User *currentUser; // 当前登录用户
-    DBConnector _db;   // 数据库连接对象
+    // DBConnector _db;   // 数据库连接对象
 
     // 辅助函数：查找节点
     Node *findNode(string id) const;
-    // SQL字符串转义辅助函数
-    string escapeSQL(const string &str);
 
 public:
     // 构造函数和析构函数

@@ -27,14 +27,38 @@ std::string StringUtils::escapeSQL(const std::string &str)
     std::string res;
     for (char c : str)
     {
-        if (c == '\'')
-            res += "''"; // 单引号转义为两个单引号
-        else if (c == '"')
-            res += "\""; // 双引号转义
-        else if (c == '\\')
-            res += "\\\\"; // 反斜杠转义
-        else
-            res += c;
+        switch (c)
+        {
+        case '\'':
+            res += "\\'";
+            break; // 单引号转义
+        case '"':
+            res += "\\\"";
+            break; // 双引号转义
+        case '\\':
+            res += "\\\\";
+            break; // 反斜杠转义
+        case '\n':
+            res += "\\n";
+            break; // 换行符转义
+        case '\r':
+            res += "\\r";
+            break; // 回车符转义
+        case '\t':
+            res += "\\t";
+            break; // 制表符转义
+        case '\b':
+            res += "\\b";
+            break; // 退格符转义
+        case '\v':
+            res += "\\v";
+            break; // 垂直制表符转义
+        case '\0':
+            res += "\\0";
+            break; // 空字符转义
+        default:
+            res += c; // 其他字符不变
+        }
     }
     return res;
 }

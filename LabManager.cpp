@@ -20,28 +20,10 @@ LabManager::LabManager() : head(nullptr), currentUser(nullptr)
     // 从文件加载数据
     loadFromFile("data.dat");
     // 数据库连接参数
-    _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
-    assert(_db.isConnected() && "数据库连接失败！");
+    DBConnector::getInstance()->connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+    // assert(DBConnector::getInstance().isConnected() && "数据库连接失败！");
     std::cout << "[成功] 数据库连接正常\n"
               << std::endl;
-}
-
-/**
- * @brief SQL字符串转义，防止SQL注入和语法错误
- * @param str
- * @return string
- */
-string LabManager::escapeSQL(const string &str)
-{
-    string res;
-    for (char c : str)
-    {
-        if (c == '\'')
-            res += "''";
-        else
-            res += c;
-    }
-    return res;
 }
 
 /**
@@ -53,24 +35,25 @@ string LabManager::escapeSQL(const string &str)
 bool LabManager::addUserToDataBase(const User &user)
 {
     // 检查数据库连接状态
-    if (!_db.isConnected())
+    if (!DBConnector::getInstance()->isConnected())
     {
-        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
-        if (!_db.isConnected())
+        if (!DBConnector::getInstance()->connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT))
+        {
             return false;
+        }
     }
 
-    string sql = "INSERT INTO students (student_id, name, gender, major, enrollment_year, contact_info, username, password, is_admin) VALUES ('" + escapeSQL(user.getID()) + "', '" + escapeSQL(user.getName()) + "', '" + escapeSQL(user.getGender()) + "', '" + escapeSQL(user.getMajor()) + "', " + to_string(user.getEnrollmentYear()) + ", '" + escapeSQL(user.getContactInfo()) + "', '" + escapeSQL(user.getUsername()) + "', '" + escapeSQL(user.getPassword()) + "', " + (user.isAdminUser() ? "1" : "0") + ")";
+    string sql = "INSERT INTO students (student_id, name, gender, major, enrollment_year, contact_info, username, password, is_admin) VALUES ('" + StringUtils::escapeSQL(user.getID()) + "', '" + StringUtils::escapeSQL(user.getName()) + "', '" + StringUtils::escapeSQL(user.getGender()) + "', '" + StringUtils::escapeSQL(user.getMajor()) + "', " + to_string(user.getEnrollmentYear()) + ", '" + StringUtils::escapeSQL(user.getContactInfo()) + "', '" + StringUtils::escapeSQL(user.getUsername()) + "', '" + StringUtils::escapeSQL(user.getPassword()) + "', " + (user.isAdminUser() ? "1" : "0") + ")";
 
     // 输出SQL语句用于调试
     cout << "执行SQL: " << sql << endl;
 
-    bool result = _db.implement(sql);
+    bool result = DBConnector::getInstance()->implement(sql);
     if (!result)
     {
         cerr << "添加用户到数据库失败! SQL: " << sql << endl;
         // 获取MySQL错误信息
-        MYSQL *conn = _db.getConnection(); // 需要在DBConnector中添加获取连接的方法
+        MYSQL *conn = DBConnector::getInstance()->getConnection(); // 需要在DBConnector中添加获取连接的方法
         if (conn)
             cerr << "MySQL错误: " << mysql_error(conn) << endl;
     }
@@ -86,15 +69,15 @@ bool LabManager::addUserToDataBase(const User &user)
 bool LabManager::deleteUserFromDataBase(const string &userID)
 {
     // 检查数据库连接状态
-    if (!_db.isConnected())
+    if (!DBConnector::getInstance()->isConnected())
     {
         cerr << "数据库未连接，无法添加用户到数据库" << endl;
         return false;
     }
     // 输出SQL语句用于调试
-    string sql = "DELETE FROM students WHERE student_id = '" + escapeSQL(userID) + "'";
+    string sql = "DELETE FROM students WHERE student_id = '" + StringUtils::escapeSQL(userID) + "'";
     cout << "执行SQL: " << sql << endl;
-    return _db.implement(sql);
+    return DBConnector::getInstance()->implement(sql);
 }
 
 /**
@@ -107,26 +90,26 @@ bool LabManager::deleteUserFromDataBase(const string &userID)
 bool LabManager::updateUserInDataBase(const string &userID, const User &newInfo)
 {
     // 检查数据库连接状态
-    if (!_db.isConnected())
+    if (!DBConnector::getInstance()->isConnected())
     {
         // 尝试重新连接数据库
-        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        DBConnector::getInstance()->connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
         // 检查重连结果
-        if (!_db.isConnected())
+        if (!DBConnector::getInstance()->isConnected())
         {
             cerr << "数据库未连接，无法更新用户信息" << endl; // 修正错误信息
             // 获取并显示MySQL错误信息
-            MYSQL *conn = _db.getConnection();
+            MYSQL *conn = DBConnector::getInstance()->getConnection();
             if (conn)
                 cerr << "MySQL错误: " << mysql_error(conn) << endl;
             return false;
         }
     }
-    string sql = "UPDATE students SET name = '" + escapeSQL(newInfo.getName()) + "', gender = '" + escapeSQL(newInfo.getGender()) + "', major = '" + escapeSQL(newInfo.getMajor()) + "', " + "enrollment_year = " + to_string(newInfo.getEnrollmentYear()) + ", contact_info = '" + escapeSQL(newInfo.getContactInfo()) + "', " + "username = '" + escapeSQL(newInfo.getUsername()) + "', password = '" + escapeSQL(newInfo.getPassword()) + "', is_admin = " + (newInfo.isAdminUser() ? "1" : "0") + " " + "WHERE student_id = '" + escapeSQL(userID) + "'";
+    string sql = "UPDATE students SET name = '" + StringUtils::escapeSQL(newInfo.getName()) + "', gender = '" + StringUtils::escapeSQL(newInfo.getGender()) + "', major = '" + StringUtils::escapeSQL(newInfo.getMajor()) + "', " + "enrollment_year = " + to_string(newInfo.getEnrollmentYear()) + ", contact_info = '" + StringUtils::escapeSQL(newInfo.getContactInfo()) + "', " + "username = '" + StringUtils::escapeSQL(newInfo.getUsername()) + "', password = '" + StringUtils::escapeSQL(newInfo.getPassword()) + "', is_admin = " + (newInfo.isAdminUser() ? "1" : "0") + " " + "WHERE student_id = '" + StringUtils::escapeSQL(userID) + "'";
     // 输出SQL语句用于调试
     cout << "执行SQL: " << sql << endl;
 
-    return _db.implement(sql);
+    return DBConnector::getInstance()->implement(sql);
 }
 
 /**
@@ -146,17 +129,17 @@ bool LabManager::queryUserFromDataBase(const string &userID, User &user)
         return false;
     }
     cout << "[提示] 正在数据库中查询用户信息，用户ID: " << userID << endl;
-    string sql = "SELECT * FROM students WHERE student_id = '" + escapeSQL(trimmedID) + "'";
+    string sql = "SELECT * FROM students WHERE student_id = '" + StringUtils::escapeSQL(trimmedID) + "'";
     cout << "[SQL语句] " << sql << endl; // 调试用，正式环境可移除
     // 检查数据库连接状态
-    if (!_db.isConnected())
+    if (!DBConnector::getInstance()->isConnected())
     {
-        _db.connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
-        if (!_db.isConnected())
+        DBConnector::getInstance()->connect(DB_IP, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        if (!DBConnector::getInstance()->isConnected())
             return false;
     }
 
-    string result = _db.query(sql);
+    string result = DBConnector::getInstance()->query(sql);
     if (result.empty())
     {
         cout << "[警告] 数据库查询返回空结果" << endl;

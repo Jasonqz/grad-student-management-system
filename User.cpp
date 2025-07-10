@@ -82,10 +82,24 @@ void User::inputInfo(bool partial, bool isAdminMode)
             else
             {
                 cout << "无效的年份输入！请输入数字年份。" << endl;
-                cout << "入学年份: ";
+                // 添加循环直到获取有效输入
+                while (true)
+                {
+                    cout << "入学年份: ";
+                    getline(cin, yearInput);
+                    yearInput = StringUtils::trim(yearInput);
+                    if (yearInput.empty() || StringUtils::isValidUserID(yearInput))
+                    {
+                        if (!yearInput.empty())
+                        {
+                            enrollmentYear = stoi(yearInput);
+                        }
+                        break;
+                    }
+                    cout << "无效的年份输入！请输入数字年份。" << endl;
+                }
             }
         }
-        cin.ignore(); // 清除缓冲区的换行符
     }
 
     if (!partial || contactInfo.empty())
@@ -95,12 +109,12 @@ void User::inputInfo(bool partial, bool isAdminMode)
     }
 
     // 管理员可以设置密码
-    if (isAdmin && (!partial || password.empty()))
-    {
-        cout << "密码: ";
-        getline(cin, password);
-    }
-    // 添加用户名修改选项（仅在修改模式下）
+    // if (isAdminMode && (!partial || password.empty()))
+    // {
+    //     cout << "密码: ";
+    //     getline(cin, password);
+    // }
+    // 用户名密码修改选项（仅在修改模式下）
     if (partial)
     {
         cout << "用户名(不修改请留空): ";
@@ -125,7 +139,7 @@ void User::inputInfo(bool partial, bool isAdminMode)
     //     }
 
     // 新增：管理员修改模式下显示角色修改选项
-    if (isAdminMode)
+    if (isAdminMode || !partial)
     {
         cout << "是否管理员(1-是, 0-否，其他-否 不修改请留空): ";
         string adminInput;

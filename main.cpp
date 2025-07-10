@@ -15,7 +15,7 @@
 
 using namespace std;
 
-DBConnector db;
+// DBConnector db;
 bool isConnected = false;
 // 权限检查辅助函数
 bool checkLoggedIn(bool loggedIn)

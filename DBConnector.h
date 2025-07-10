@@ -15,12 +15,23 @@ private:
     std::vector<std::string> _field; // 字段名
     MYSQL_RES *_res;                 // 返回行的查询结果集
     MYSQL_ROW _column;               // 一个行数据的类型安全的表示
-
-public:
+    static DBConnector *instance;    // 单例实例
     /*
      * @brief 构造函数，初始化参数
      */
     DBConnector();
+    // 私有析构函数
+    ~DBConnector();
+    // 禁止拷贝构造和赋值运算符
+    DBConnector(const DBConnector &) = delete;
+    DBConnector &operator=(const DBConnector &) = delete;
+
+public:
+    /*
+     * @brief 获取单例实例
+     * @return DBConnector* 单例对象指针
+     */
+    static DBConnector *getInstance();
 
     /*
      * @brief 连接数据库

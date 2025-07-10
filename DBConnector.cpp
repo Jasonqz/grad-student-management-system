@@ -3,7 +3,28 @@
 
 DBConnector::DBConnector() : _state(false), _res(nullptr), _column(nullptr)
 {
-    _conn = new MYSQL;
+    _conn = mysql_init(nullptr);
+    if (!_conn)
+    {
+        std::cerr << "MySQL初始化失败: " << mysql_error(_conn) << std::endl;
+    }
+}
+
+DBConnector::~DBConnector()
+{
+    if (_conn)
+    {
+        mysql_close(_conn);
+        _conn = nullptr;
+    }
+    _state = false;
+}
+
+// 使用C++11静态局部变量实现无锁线程安全单例
+DBConnector *DBConnector::getInstance()
+{
+    static DBConnector instance; // C++11保证静态局部变量初始化是线程安全的
+    return &instance;
 }
 
 bool DBConnector::connect(std::string const &ip, std::string const &name, std::string const &pass, std::string const &dataBaseName, int const port)
